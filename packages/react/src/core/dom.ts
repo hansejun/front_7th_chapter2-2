@@ -203,6 +203,11 @@ export const insertInstance = (
   const nodes = getDomNodes(instance);
 
   nodes.forEach((node) => {
+    // 이미 올바른 위치에 있으면 스킵
+    if (node.parentNode === parentDom && node.nextSibling === anchor) {
+      return;
+    }
+
     if (anchor) {
       // anchor 앞에 삽입
       parentDom.insertBefore(node, anchor);
@@ -220,6 +225,9 @@ export const removeInstance = (parentDom: HTMLElement, instance: Instance | null
   const nodes = getDomNodes(instance);
 
   nodes.forEach((node) => {
-    parentDom.removeChild(node);
+    // 노드가 실제로 parentDom의 자식인 경우에만 제거
+    if (node.parentNode === parentDom) {
+      parentDom.removeChild(node);
+    }
   });
 };

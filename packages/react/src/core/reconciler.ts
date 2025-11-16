@@ -49,7 +49,7 @@ export const reconcile = (
  * 새로운 VNode를 마운트하여 Instance를 생성합니다.
  */
 const mount = (parentDom: HTMLElement, node: VNode, path: string): Instance => {
-  const { type, props, key } = node;
+  const { type, props = {}, key } = node;
 
   // TEXT 노드 마운트
   if (type === TEXT_ELEMENT) {
@@ -68,19 +68,8 @@ const mount = (parentDom: HTMLElement, node: VNode, path: string): Instance => {
 
   // FRAGMENT 마운트
   if (type === Fragment) {
-    const children = (props.children || [])
-      .filter((child: VNode) => !isEmptyValue(child))
-      .map((child: VNode, index: number) => {
-        const childPath = createChildPath(path, child.key, index);
-        const childInstance = reconcile(parentDom, null, child, childPath);
-
-        // 자식 DOM을 부모 DOM에 삽입
-        if (childInstance) {
-          insertInstance(parentDom, childInstance);
-        }
-
-        return childInstance;
-      });
+    const newChildren = (props.children || []).filter((child: VNode) => !isEmptyValue(child));
+    const children = reconcileChildren(parentDom, [], newChildren, path);
 
     return {
       kind: NodeTypes.FRAGMENT,
@@ -94,22 +83,24 @@ const mount = (parentDom: HTMLElement, node: VNode, path: string): Instance => {
 
   // COMPONENT 마운트
   if (typeof type === "function") {
-    // 컴포넌트 스택에 경로 추가
+    // 컴포넌트 스택에 경로 추가 및 훅 상태 초기화
     context.hooks.componentStack.push(path);
     context.hooks.visited.add(path);
 
+    // 훅 상태 배열 초기화 (첫 마운트 시)
+    if (!context.hooks.state.has(path)) {
+      context.hooks.state.set(path, []);
+    }
+    // 훅 커서 초기화
+    context.hooks.cursor.set(path, 0);
+
     try {
       // 컴포넌트 함수 실행
-      const childNode = type(props);
+      const childNode = type(props || {});
 
       // 자식 reconcile
-      const childPath = createChildPath(path, childNode?.key ?? null, 0);
+      const childPath = createChildPath(path, childNode?.key ?? null, 0, childNode?.type, childNode ? [childNode] : []);
       const child = reconcile(parentDom, null, childNode, childPath);
-
-      // 자식 DOM을 부모 DOM에 삽입
-      if (child) {
-        insertInstance(parentDom, child);
-      }
 
       return {
         kind: NodeTypes.COMPONENT,
@@ -129,20 +120,9 @@ const mount = (parentDom: HTMLElement, node: VNode, path: string): Instance => {
   const dom = document.createElement(type as string);
   setDomProps(dom, props);
 
-  // 자식 마운트
-  const children = (props.children || [])
-    .filter((child: VNode) => !isEmptyValue(child))
-    .map((child: VNode, index: number) => {
-      const childPath = createChildPath(path, child.key, index);
-      const childInstance = reconcile(dom, null, child, childPath);
-
-      // 자식 DOM을 부모 DOM에 삽입
-      if (childInstance) {
-        insertInstance(dom, childInstance);
-      }
-
-      return childInstance;
-    });
+  // 자식 마운트 - reconcileChildren를 사용하여 자식 삽입까지 처리
+  const newChildren = (props.children || []).filter((child: VNode) => !isEmptyValue(child));
+  const children = reconcileChildren(dom, [], newChildren, path);
 
   return {
     kind: NodeTypes.HOST,
@@ -194,7 +174,7 @@ const reconcileChildren = (
       unkeyedIndex++;
     }
 
-    const childPath = createChildPath(path, newChild.key, i);
+    const childPath = createChildPath(path, newChild.key, i, newChild.type, newChildren);
     const newInstance = reconcile(parentDom, oldChild, newChild, childPath);
     result.push(newInstance);
   }
@@ -211,7 +191,8 @@ const reconcileChildren = (
     const child = result[i];
     if (child) {
       const firstDom = getFirstDom(child);
-      if (firstDom && firstDom.nextSibling !== anchor) {
+      // DOM 노드가 parentDom의 자식이 아니거나, 순서가 잘못된 경우 삽입/이동
+      if (firstDom && (firstDom.parentNode !== parentDom || firstDom.nextSibling !== anchor)) {
         insertInstance(parentDom, child, anchor);
       }
       if (firstDom) anchor = firstDom;
@@ -225,7 +206,7 @@ const reconcileChildren = (
  * 기존 Instance를 새로운 VNode로 업데이트합니다.
  */
 const update = (parentDom: HTMLElement, instance: Instance, node: VNode, path: string): Instance => {
-  const { type, props } = node;
+  const { type, props = {} } = node;
 
   // TEXT 노드 업데이트
   if (type === TEXT_ELEMENT && instance.dom) {
@@ -253,14 +234,22 @@ const update = (parentDom: HTMLElement, instance: Instance, node: VNode, path: s
     context.hooks.componentStack.push(path);
     context.hooks.visited.add(path);
 
+    // 훅 커서 초기화 (업데이트 시에도 커서를 0부터 시작)
+    context.hooks.cursor.set(path, 0);
+
     try {
       // 컴포넌트 함수 재실행
-      const childNode = type(props);
+      const childNode = type(props || {});
 
       // 자식 reconcile
       const oldChild = instance.children[0];
-      const childPath = createChildPath(path, childNode?.key ?? null, 0);
+      const childPath = createChildPath(path, childNode?.key ?? null, 0, childNode?.type, childNode ? [childNode] : []);
       const newChild = reconcile(parentDom, oldChild, childNode, childPath);
+
+      // 자식이 교체된 경우 (다른 인스턴스) DOM에 삽입 필요
+      if (newChild && newChild !== oldChild) {
+        insertInstance(parentDom, newChild);
+      }
 
       instance.children = [newChild];
       instance.node = node;

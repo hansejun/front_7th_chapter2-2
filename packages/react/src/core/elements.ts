@@ -71,10 +71,10 @@ export const createElement = (
   // Step 3: VNode 객체 생성
   return {
     type,
-    key: key === null ? null : String(key),
+    key,
     props: {
       ...restProps,
-      children,
+      ...(children.length > 0 ? { children } : {}),
     },
   };
 };
@@ -95,22 +95,24 @@ export const createChildPath = (
     return `${parentPath}.k${key}`;
   }
 
-  // Step 2: key가 없는 경우 - index와 type 조합
-  // 같은 타입의 형제 중 몇 번째인지 계산
-  let typeIndex = 0;
-  if (siblings && nodeType) {
+  // Step 2: key가 없는 경우
+  const isComponent = typeof nodeType === "function";
+
+  if (isComponent && siblings && nodeType) {
+    // 컴포넌트: 같은 타입의 형제 중 몇 번째인지 계산
+    let typeIndex = 0;
     for (let i = 0; i < index; i++) {
       if (siblings[i]?.type === nodeType) {
         typeIndex++;
       }
     }
+
+    // 타입 이름 추출 (함수 이름 또는 고유 ID)
+    const typeName = (nodeType as any).name || "Component";
+    return `${parentPath}.${typeName}${typeIndex}`;
   }
 
-  // Step 3: 경로 생성
-  // 컴포넌트: i{typeIndex} (instance)
-  // HOST/TEXT: c{index} (child)
-  const isComponent = typeof nodeType === "function";
-  const token = isComponent ? `i${typeIndex}` : `c${index}`;
-
+  // HOST/TEXT: c{index}
+  const token = isComponent ? `i${index}` : `c${index}`;
   return `${parentPath}.${token}`;
 };
