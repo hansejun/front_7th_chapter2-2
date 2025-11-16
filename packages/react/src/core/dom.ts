@@ -169,8 +169,15 @@ export const getDomNodes = (instance: Instance | null): (HTMLElement | Text)[] =
  * 주어진 인스턴스에서 첫 번째 실제 DOM 노드를 찾습니다.
  */
 export const getFirstDom = (instance: Instance | null): HTMLElement | Text | null => {
-  const nodes = getDomNodes(instance);
-  return nodes[0] ?? null;
+  if (!instance) return null;
+
+  // HOST나 TEXT 타입은 직접 DOM을 가짐
+  if (instance.kind === NodeTypes.HOST || instance.kind === NodeTypes.TEXT) {
+    return instance.dom ?? null;
+  }
+
+  // COMPONENT나 FRAGMENT는 자식들에서 첫 번째 DOM을 찾음
+  return getFirstDomFromChildren(instance.children);
 };
 
 /**
