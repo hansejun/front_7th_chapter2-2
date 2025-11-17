@@ -7,5 +7,18 @@
  */
 export const isEmptyValue = (value: unknown): boolean => {
   // 여기를 구현하세요.
+
+  if (typeof value === "boolean" || value === null || value === undefined) {
+    return true;
+  }
+
+  if (Array.isArray(value)) {
+    return value.length === 0;
+  }
+
+  if (typeof value === "object" && value !== null) {
+    return Object.keys(value).length === 0;
+  }
+
   return false;
 };
