@@ -5,7 +5,25 @@
 export const shallowEquals = (a: unknown, b: unknown): boolean => {
   // 여기를 구현하세요.
   // Object.is(), Array.isArray(), Object.keys() 등을 활용하여 1단계 깊이의 비교를 구현합니다.
-  return a === b;
+
+  if (a !== b) return false;
+
+  if (typeof a !== typeof b) return false;
+
+  if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) return false;
+
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    return a.every((value, index) => value === b[index]);
+  }
+
+  if (Object.keys(a).length !== Object.keys(b).length) return false;
+
+  for (const key in a) {
+    if (a[key as keyof typeof a] !== b[key as keyof typeof b]) return false;
+  }
+
+  return true;
 };
 
 /**
