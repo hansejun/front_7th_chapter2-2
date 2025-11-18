@@ -81,18 +81,37 @@ export const createElement = (
  * 부모 경로와 자식의 key/index를 기반으로 고유한 경로를 생성합니다.
  * 이는 훅의 상태를 유지하고 Reconciliation에서 컴포넌트를 식별하는 데 사용됩니다.
  */
-// export const createChildPath = (
-//   parentPath: string,
-//   key: string | null,
-//   index: number,
-//   nodeType?: string | symbol | React.ComponentType,
-//   siblings?: VNode[],
-// ): string => {
-//   if (key !== null) {
-//     return `${parentPath}.k${key}`;
-//   }
+export const createChildPath = (
+  parentPath: string,
+  key: string | null,
+  index: number,
+  nodeType?: string | symbol | React.ComponentType,
+  siblings?: VNode[],
+): string => {
+  // key가 있는 경우
+  if (key !== null) {
+    return `${parentPath}.k${key}`;
+  }
 
-//   return "";
-// };
+  // key가 없는 경우
+  const isComponent = typeof nodeType === "function";
 
-// export const create;
+  if (isComponent && siblings && nodeType) {
+    // 같은 타입의 형제 중 몇 번째인지 계산
+    let typeIndex = 0;
+
+    for (let i = 0; i < index; i++) {
+      if (siblings[i]?.type === nodeType) {
+        typeIndex++;
+      }
+    }
+
+    // 타입 이름 추출 (함수 이름 또는 고유 ID)
+    const typeName = (nodeType as any).name || "Component";
+    return `${parentPath}.${typeName}${typeIndex}`;
+  }
+
+  // HOST/TEXT: c{index}
+  const token = isComponent ? `i${index}` : `c${index}`;
+  return `${parentPath}.${token}`;
+};
