@@ -14,7 +14,27 @@ export const normalizeNode = (node: VNode): VNode | null => {
     return null;
   }
 
-  return node;
+  if (Array.isArray(node)) {
+    const children = node.map((n) => normalizeNode(n));
+    return {
+      type: node.type,
+      key: node.key,
+      props: {
+        ...node.props,
+        children: children.filter((n) => n !== null),
+      },
+    };
+  }
+
+  if (typeof node === "string" || typeof node === "number") {
+    return createTextElement(node);
+  }
+
+  if (typeof node === "object" && node !== null) {
+    return node;
+  }
+
+  return createTextElement(String(node));
 };
 
 /**
@@ -46,28 +66,8 @@ export const createElement = (
 
   const children = rawChildren
     .flat(Infinity)
-    .map((child) => {
-      if (typeof child === "string" || typeof child === "number") {
-        return createTextElement(child);
-      }
-
-      if (isEmptyValue(child)) {
-        return null;
-      }
-
-      if (Array.isArray(child.props?.children)) {
-        child.props.children = child.props.children.map((c: VNode) => {
-          return createElement(c.type, c.props, ...(c.props?.children ?? []));
-        });
-        return child;
-      }
-
-      if (typeof child === "object" && child !== null) {
-        return child;
-      }
-    })
     .map(normalizeNode)
-    .filter((node) => node !== null);
+    .filter((n) => n !== null);
 
   // CHECK: Function Component인 경우 children이 비어있으면 undefined로 처리?
   return {
@@ -75,7 +75,7 @@ export const createElement = (
     key: key ?? null,
     props: {
       ...rest,
-      children: typeof type === "function" ? (children.length > 0 ? children : undefined) : children,
+      ...(children.length > 0 ? { children } : {}),
     },
   };
 };
