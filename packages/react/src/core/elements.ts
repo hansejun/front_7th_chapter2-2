@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { isEmptyValue } from "../utils";
 import { VNode } from "./types";
-import { Fragment, TEXT_ELEMENT } from "./constants";
+// import { Fragment, TEXT_ELEMENT } from "./constants";
+import { TEXT_ELEMENT } from "./constants";
 
 /**
  * 주어진 노드를 VNode 형식으로 정규화합니다.
@@ -9,15 +10,24 @@ import { Fragment, TEXT_ELEMENT } from "./constants";
  */
 export const normalizeNode = (node: VNode): VNode | null => {
   // 여기를 구현하세요.
-  return null;
+  if (isEmptyValue(node)) {
+    return null;
+  }
+
+  return node;
 };
 
 /**
  * 텍스트 노드를 위한 VNode를 생성합니다.
  */
-const createTextElement = (node: VNode): VNode => {
+const createTextElement = (nodeValue: string | number): VNode => {
   // 여기를 구현하세요.
-  return {} as VNode;
+
+  return {
+    type: TEXT_ELEMENT,
+    key: null,
+    props: { children: [], nodeValue: String(nodeValue) },
+  };
 };
 
 /**
@@ -30,19 +40,57 @@ export const createElement = (
   ...rawChildren: any[]
 ) => {
   // 여기를 구현하세요.
+  // FIXME: 여기서는 반복문만 돌리고 normalize에서 처리
+
+  const { key = null, ...rest } = originProps ?? {};
+
+  const children = rawChildren
+    .flat(Infinity)
+    .map((child) => {
+      if (typeof child === "string" || typeof child === "number") {
+        return createTextElement(child);
+      }
+
+      if (isEmptyValue(child)) {
+        return null;
+      }
+
+      if (Array.isArray(child.props?.children)) {
+        child.props.children = child.props.children.map((c: VNode) => {
+          return createElement(c.type, c.props, ...(c.props?.children ?? []));
+        });
+        return child;
+      }
+
+      if (typeof child === "object" && child !== null) {
+        return child;
+      }
+    })
+    .map(normalizeNode)
+    .filter((node) => node !== null);
+
+  // CHECK: Function Component인 경우 children이 비어있으면 undefined로 처리?
+  return {
+    type,
+    key: key ?? null,
+    props: {
+      ...rest,
+      children: typeof type === "function" ? (children.length > 0 ? children : undefined) : children,
+    },
+  };
 };
 
 /**
  * 부모 경로와 자식의 key/index를 기반으로 고유한 경로를 생성합니다.
  * 이는 훅의 상태를 유지하고 Reconciliation에서 컴포넌트를 식별하는 데 사용됩니다.
  */
-export const createChildPath = (
-  parentPath: string,
-  key: string | null,
-  index: number,
-  nodeType?: string | symbol | React.ComponentType,
-  siblings?: VNode[],
-): string => {
-  // 여기를 구현하세요.
-  return "";
-};
+// export const createChildPath = (
+//   parentPath: string,
+//   key: string | null,
+//   index: number,
+//   nodeType?: string | symbol | React.ComponentType,
+//   siblings?: VNode[],
+// ): string => {
+//   // 여기를 구현하세요.
+//   return "";
+// };
