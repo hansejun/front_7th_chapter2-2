@@ -2,7 +2,7 @@
 import { isEmptyValue } from "../utils";
 import { VNode } from "./types";
 // import { Fragment, TEXT_ELEMENT } from "./constants";
-import { TEXT_ELEMENT } from "./constants";
+import { Fragment, TEXT_ELEMENT } from "./constants";
 
 /**
  * 주어진 노드를 VNode 형식으로 정규화합니다.
@@ -15,13 +15,12 @@ export const normalizeNode = (node: VNode): VNode | null => {
   }
 
   if (Array.isArray(node)) {
-    const children = node.map((n) => normalizeNode(n));
     return {
-      type: node.type,
-      key: node.key,
+      type: Fragment,
+      key: null,
       props: {
         ...node.props,
-        children: children.filter((n) => n !== null),
+        children: node.map(normalizeNode).filter((n) => n !== null),
       },
     };
   }
@@ -30,7 +29,7 @@ export const normalizeNode = (node: VNode): VNode | null => {
     return createTextElement(node);
   }
 
-  if (typeof node === "object" && node !== null) {
+  if (typeof node === "object") {
     return node;
   }
 
@@ -60,7 +59,6 @@ export const createElement = (
   ...rawChildren: any[]
 ) => {
   // 여기를 구현하세요.
-  // FIXME: 여기서는 반복문만 돌리고 normalize에서 처리
 
   const { key = null, ...rest } = originProps ?? {};
 
@@ -69,7 +67,6 @@ export const createElement = (
     .map(normalizeNode)
     .filter((n) => n !== null);
 
-  // CHECK: Function Component인 경우 children이 비어있으면 undefined로 처리?
   return {
     type,
     key: key ?? null,
@@ -91,6 +88,11 @@ export const createElement = (
 //   nodeType?: string | symbol | React.ComponentType,
 //   siblings?: VNode[],
 // ): string => {
-//   // 여기를 구현하세요.
+//   if (key !== null) {
+//     return `${parentPath}.k${key}`;
+//   }
+
 //   return "";
 // };
+
+// export const create;
