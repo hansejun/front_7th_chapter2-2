@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { NodeType, NodeTypes } from "./constants";
+import { NodeTypes } from "./constants";
 import { Instance } from "./types";
 
 /**
@@ -8,6 +8,18 @@ import { Instance } from "./types";
  */
 export const setDomProps = (dom: HTMLElement, props: Record<string, any>): void => {
   // 여기를 구현하세요.
+
+  Object.entries(props).forEach(([key, value]) => {
+    if (key.startsWith("on")) {
+      dom.addEventListener(key.slice(2).toLowerCase(), value);
+    } else if (key === "className") {
+      dom.className = value;
+    } else if (key === "style") {
+      dom.style = value;
+    } else {
+      dom.setAttribute(key, value);
+    }
+  });
 };
 
 /**
@@ -20,6 +32,11 @@ export const updateDomProps = (
   nextProps: Record<string, any> = {},
 ): void => {
   // 여기를 구현하세요.
+  Object.entries(nextProps).forEach(([key, value]) => {
+    if (prevProps[key] !== value) {
+      setDomProps(dom, { [key]: value });
+    }
+  });
 };
 
 /**
@@ -28,7 +45,16 @@ export const updateDomProps = (
  */
 export const getDomNodes = (instance: Instance | null): (HTMLElement | Text)[] => {
   // 여기를 구현하세요.
-  return [];
+
+  if (!instance) return [];
+
+  if (instance.kind === NodeTypes.HOST) return instance.dom ? [instance.dom] : [];
+  if (instance.kind === NodeTypes.TEXT) return instance.dom ? [instance.dom] : [];
+
+  // Fragment | Component
+
+  const nodes = instance.children.map(getDomNodes).flat();
+  return nodes;
 };
 
 /**
@@ -36,7 +62,16 @@ export const getDomNodes = (instance: Instance | null): (HTMLElement | Text)[] =
  */
 export const getFirstDom = (instance: Instance | null): HTMLElement | Text | null => {
   // 여기를 구현하세요.
-  return null;
+
+  if (!instance) return null;
+
+  if (instance.kind === NodeTypes.HOST) return instance.dom;
+  if (instance.kind === NodeTypes.TEXT) return instance.dom;
+
+  // Fragment | Component
+
+  // CHECK: 이거 되나?
+  return instance.children[0]?.dom ?? null;
 };
 
 /**
@@ -44,7 +79,10 @@ export const getFirstDom = (instance: Instance | null): HTMLElement | Text | nul
  */
 export const getFirstDomFromChildren = (children: (Instance | null)[]): HTMLElement | Text | null => {
   // 여기를 구현하세요.
-  return null;
+  if (children.length === 0) return null;
+
+  // CHECK: 이거 되나?
+  return children[0]?.dom ?? null;
 };
 
 /**
@@ -57,6 +95,17 @@ export const insertInstance = (
   anchor: HTMLElement | Text | null = null,
 ): void => {
   // 여기를 구현하세요.
+  if (!instance) return;
+
+  const nodes = getDomNodes(instance);
+
+  nodes.forEach((node) => {
+    if (anchor) {
+      parentDom.insertBefore(node, anchor);
+    } else {
+      parentDom.appendChild(node);
+    }
+  });
 };
 
 /**
@@ -64,4 +113,11 @@ export const insertInstance = (
  */
 export const removeInstance = (parentDom: HTMLElement, instance: Instance | null): void => {
   // 여기를 구현하세요.
+  if (!instance) return;
+
+  const nodes = getDomNodes(instance);
+
+  nodes.forEach((node) => {
+    parentDom.removeChild(node);
+  });
 };
