@@ -19,10 +19,9 @@ export const withEnqueue = (fn: AnyFunction) => {
 
   let scheduled = false;
 
-  if (scheduled) return;
-
   return () => {
     if (scheduled) return;
+
     scheduled = true;
 
     enqueue(() => {
