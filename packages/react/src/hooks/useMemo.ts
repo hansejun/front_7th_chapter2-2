@@ -18,12 +18,12 @@ export const useMemo = <T>(factory: () => T, deps: DependencyList, equals = shal
 
   const ref = useRef<{ value: T; deps: DependencyList } | null>(null);
 
-  const isChanged = ref.current && equals(ref.current.deps, deps);
+  if (!ref.current || !equals(ref.current.deps, deps)) {
+    ref.current = {
+      deps,
+      value: factory(),
+    };
+  }
 
-  if (!isChanged) return ref.current!.value;
-
-  const value = factory();
-  ref.current = { value, deps };
-
-  return value;
+  return ref.current.value;
 };
