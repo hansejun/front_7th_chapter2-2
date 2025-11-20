@@ -57,12 +57,6 @@ export const updateDomProps = (
   Object.entries(prevProps).forEach(([key, value]) => {
     if (key === "children") return;
 
-    // 이벤트 핸들러가 변경되었으면 이전 핸들러를 먼저 제거
-    if (nextProps[key] && key.startsWith("on") && value) {
-      const eventType = key.slice(2).toLowerCase();
-      dom.removeEventListener(eventType, prevProps[key]);
-    }
-
     if (key in nextProps) return; // 새 props에 있으면 나중에 처리
 
     if (key.startsWith("on")) {
@@ -87,6 +81,11 @@ export const updateDomProps = (
 
   Object.entries(nextProps).forEach(([key, value]) => {
     if (prevProps[key] !== value) {
+      // 이벤트 핸들러가 변경되었으면 이전 핸들러를 먼저 제거
+      if (key.startsWith("on") && prevProps[key]) {
+        const eventType = key.slice(2).toLowerCase();
+        dom.removeEventListener(eventType, prevProps[key]);
+      }
       setDomProps(dom, { [key]: value });
     }
   });
