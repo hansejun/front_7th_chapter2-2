@@ -15,7 +15,16 @@ export function memo<P extends object>(Component: FunctionComponent<P>, equals =
     // 여기를 구현하세요.
     // useRef를 사용하여 이전 props와 렌더링 결과를 저장해야 합니다.
     // equals 함수로 이전 props와 현재 props를 비교하여 렌더링 여부를 결정합니다.
-    return Component(props);
+
+    const cache = useRef<{ props: P; result: VNode } | null>(null);
+
+    if (cache.current && equals(cache.current.props, props)) {
+      return cache.current.result;
+    }
+
+    const result = Component(props);
+    cache.current = { props, result: result as VNode };
+    return result;
   };
 
   MemoizedComponent.displayName = `Memo(${Component.displayName || Component.name})`;
