@@ -113,11 +113,13 @@ export const insertInstance = (
  */
 export const removeInstance = (parentDom: HTMLElement, instance: Instance | null): void => {
   // 여기를 구현하세요.
-  if (!instance) return;
 
   const nodes = getDomNodes(instance);
 
   nodes.forEach((node) => {
+    // setup 여러 번 호출되는 경우 문제 발생하여 추가
+    if (node.parentNode !== parentDom) return;
+
     parentDom.removeChild(node);
   });
 };
