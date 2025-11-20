@@ -10,15 +10,35 @@ export const setDomProps = (dom: HTMLElement, props: Record<string, any>): void 
   // 여기를 구현하세요.
 
   Object.entries(props).forEach(([key, value]) => {
+    if (key === "children") return;
+
     if (key.startsWith("on")) {
       dom.addEventListener(key.slice(2).toLowerCase(), value);
-    } else if (key === "className") {
-      dom.className = value;
-    } else if (key === "style") {
-      dom.style = value;
-    } else {
-      dom.setAttribute(key, value);
+      return;
     }
+    if (key === "className") {
+      dom.className = value;
+      return;
+    }
+
+    if (key === "style" && typeof value === "object") {
+      Object.keys(value).forEach((styleKey) => {
+        (dom.style as any)[styleKey] = value[styleKey];
+      });
+      return;
+    }
+
+    if (value === true) {
+      dom.setAttribute(key, "");
+      return;
+    }
+
+    if (value === false || value === null || value === undefined) {
+      dom.removeAttribute(key);
+      return;
+    }
+
+    dom.setAttribute(key, value);
   });
 };
 
