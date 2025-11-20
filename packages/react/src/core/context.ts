@@ -78,7 +78,12 @@ export const context: Context = {
       // 여기를 구현하세요.
       // state Map에서 현재 경로의 훅 배열을 가져옵니다. 없으면 빈 배열을 반환합니다.
       const currentPath = this.currentPath;
-      return this.state.get(currentPath) ?? [];
+      let hooks = this.state.get(currentPath);
+      if (!hooks) {
+        hooks = [];
+        this.state.set(currentPath, hooks);
+      }
+      return hooks;
     },
   },
 

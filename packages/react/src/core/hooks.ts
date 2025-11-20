@@ -105,24 +105,28 @@ export const useEffect = (effect: () => (() => void) | void, deps?: unknown[]): 
 
   // 2. 의존성이 변경되었거나 첫 렌더링일 경우, 이펙트 실행을 예약합니다.
   if (depsChanged) {
-    context.effects.queue.push({ path, cursor });
+    // 3. 이펙트 실행 전, 이전 클린업 함수가 있다면 먼저 실행합니다.
+    if (oldHook && oldHook.cleanup) {
+      oldHook.cleanup();
+    }
+
+    // 4. 예약된 이펙트는 렌더링이 끝난 후 비동기로 실행됩니다.
+    withEnqueue(() => {
+      const cleanup = effect();
+      hooks[cursor] = {
+        kind: HookTypes.EFFECT,
+        deps,
+        cleanup,
+      };
+    })();
   }
 
-  // 3. 이펙트 실행 전, 이전 클린업 함수가 있다면 먼저 실행합니다.
+  // deps는 즉시 저장하여 다음 렌더링에서 비교할 수 있도록 함
+  hooks[cursor] = {
+    kind: HookTypes.EFFECT,
+    deps,
+    cleanup: oldHook?.cleanup,
+  };
 
-  if (oldHook && oldHook.cleanup) {
-    oldHook.cleanup();
-  }
-
-  // 4. 예약된 이펙트는 렌더링이 끝난 후 비동기로 실행됩니다.
-  withEnqueue(() => {
-    const cleanup = effect();
-
-    hooks[cursor] = {
-      kind: HookTypes.EFFECT,
-      deps,
-      cleanup,
-    };
-    context.hooks.cursor.set(path, cursor + 1);
-  })();
+  context.hooks.cursor.set(path, cursor + 1);
 };
