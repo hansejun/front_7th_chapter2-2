@@ -10,7 +10,7 @@ export const setDomProps = (dom: HTMLElement, props: Record<string, any>): void 
   // 여기를 구현하세요.
 
   Object.entries(props).forEach(([key, value]) => {
-    if (key === "children") return;
+    if (key === "children" || key === "key") return;
 
     if (key.startsWith("on")) {
       dom.addEventListener(key.slice(2).toLowerCase(), value);
@@ -52,6 +52,33 @@ export const updateDomProps = (
   nextProps: Record<string, any> = {},
 ): void => {
   // 여기를 구현하세요.
+
+  // update 했을 때 사용 안하는 props는 제거해야함.
+  Object.entries(prevProps).forEach(([key, value]) => {
+    if (key === "children") return;
+
+    if (key in nextProps) return; // 새 props에 있으면 나중에 처리
+
+    if (key.startsWith("on")) {
+      const eventType = key.slice(2).toLowerCase();
+      dom.removeEventListener(eventType, value);
+      return;
+    }
+
+    if (key === "className") {
+      dom.className = "";
+      return;
+    }
+
+    if (key === "style" && typeof value === "object") {
+      Object.keys(value).forEach((styleKey) => {
+        (dom.style as any)[styleKey] = "";
+      });
+      return;
+    }
+    dom.removeAttribute(key);
+  });
+
   Object.entries(nextProps).forEach(([key, value]) => {
     if (prevProps[key] !== value) {
       setDomProps(dom, { [key]: value });
